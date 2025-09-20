@@ -1,4 +1,4 @@
-# 62.-ByteBrains-Help Me Say No to Phishing
+
 # 🎣 **62.-ByteBrains-Help Me Say No to Phishing**
 
 An AI-powered assistant designed for an 8-hour hackathon to protect users from phishing attacks. This project provides a simple, interactive web interface where users can paste suspicious messages or upload screenshots. The assistant then uses a machine learning model to quickly analyze the content and provide a verdict, along with actionable guidance.
