@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing Detector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(to bottom right, #e0f2f1, #b2e6e3);
+        }
+        .container {
+            max-width: 800px;
+        }
+        #result-box {
+            min-height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+        }
+        #analyze-button {
+            transition: all 0.3s ease;
+        }
+        #analyze-button:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="container bg-white rounded-2xl shadow-2xl p-8 sm:p-12 w-full border border-gray-200">
+        <h1 class="text-4xl sm:text-5xl font-bold text-center text-gray-900 mb-3 tracking-tight">Phishing Detector</h1>
+        <p class="text-center text-gray-500 mb-10 text-lg">Your first line of defense against online scams.</p>
+        
+        <div class="flex flex-col md:flex-row items-center justify-center gap-4 mb-8">
+            <textarea id="text-input" rows="4" class="flex-grow p-4 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none" placeholder="Paste your message or email text here..."></textarea>
+            <div class="text-center text-gray-400 font-bold hidden md:block">or</div>
+            <label class="cursor-pointer bg-indigo-600 text-white font-semibold py-4 px-8 rounded-xl shadow-lg hover:bg-indigo-700 transition-colors duration-200 ease-in-out flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload Image
+                <input type="file" id="file-input" class="hidden" accept="image/*">
+            </label>
+        </div>
+        
+        <button id="analyze-button" class="w-full bg-green-500 text-white font-bold py-4 px-8 rounded-xl shadow-lg hover:bg-green-600 transition-all duration-200 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed text-xl">
+            Analyze Message
+        </button>
+
+        <div id="result-box" class="mt-10 p-6 bg-gray-50 border border-gray-200 rounded-2xl transition-all duration-300 ease-in-out">
+            <div id="loading" class="hidden flex items-center justify-center space-x-2">
+                <div class="w-6 h-6 border-4 border-t-4 border-blue-200 rounded-full animate-spin"></div>
+                <p class="text-gray-600 text-lg">Analyzing...</p>
+            </div>
+            <div id="initial-message" class="text-center">
+                <p class="text-lg font-semibold text-gray-700">Your analysis result will appear here.</p>
+            </div>
+            <div id="prediction-result" class="hidden flex-col items-center justify-center">
+                <p class="text-2xl font-bold"></p>
+                <p class="text-sm text-gray-500 mt-2"></p>
+            </div>
+        </div>
+        
+        <div id="guidance-box" class="mt-6 p-6 bg-yellow-50 border-2 border-yellow-300 rounded-xl text-sm text-yellow-800 shadow-inner transition-all duration-300 hidden">
+            <h3 class="font-bold text-lg mb-2 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Actionable Guidance
+            </h3>
+            <ul class="list-disc list-inside space-y-2 text-gray-700">
+                <li>Do NOT click any links or download attachments.</li>
+                <li>Do NOT reply or provide any personal information.</li>
+                <li>If it's from a known company, go to their official website directly to verify.</li>
+                <li>Report the message to your email provider or security team.</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const textInput = document.getElementById('text-input');
+        const fileInput = document.getElementById('file-input');
+        const analyzeButton = document.getElementById('analyze-button');
+        const loadingDiv = document.getElementById('loading');
+        const initialMessageDiv = document.getElementById('initial-message');
+        const predictionResultDiv = document.getElementById('prediction-result');
+        const resultBox = document.getElementById('result-box');
+        const guidanceBox = document.getElementById('guidance-box');
+
+        analyzeButton.addEventListener('click', async () => {
+            const inputText = textInput.value;
+            const file = fileInput.files[0];
+            let payload = {};
+
+            if (inputText.trim() === '' && !file) {
+                alert('Please enter a message or upload an image.');
+                return;
+            }
+
+            loadingDiv.classList.remove('hidden');
+            initialMessageDiv.classList.add('hidden');
+            predictionResultDiv.classList.add('hidden');
+            guidanceBox.classList.add('hidden');
+            analyzeButton.disabled = true;
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    payload = { type: 'image', data: e.target.result };
+                    await sendForAnalysis(payload);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                payload = { type: 'text', data: inputText };
+                await sendForAnalysis(payload);
+            }
+        });
+
+        async function sendForAnalysis(payload) {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server responded with status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                displayResult(result);
+            } catch (error) {
+                console.error('Error:', error);
+                predictionResultDiv.innerHTML = `<p class="text-red-500 font-bold">Error: Could not connect to the backend server. Is 'app.py' running?</p>`;
+                predictionResultDiv.classList.remove('hidden');
+                resultBox.classList.add('border-red-500');
+            } finally {
+                loadingDiv.classList.add('hidden');
+                analyzeButton.disabled = false;
+            }
+        }
+
+        function displayResult(result) {
+            const predictionText = predictionResultDiv.querySelector('p:first-child');
+            const explanationText = predictionResultDiv.querySelector('p:last-child');
+            
+            if (result.is_phishing === true) {
+                predictionText.textContent = "Potential Phishing Attempt ⚠️";
+                predictionText.classList.remove('text-green-600');
+                predictionText.classList.add('text-red-600');
+                explanationText.textContent = "This message contains patterns and cues common in phishing scams.";
+                guidanceBox.classList.remove('hidden');
+                resultBox.classList.add('border-red-500');
+                resultBox.classList.remove('border-green-500');
+            } else {
+                predictionText.textContent = "Looks Legitimate ✅";
+                predictionText.classList.remove('text-red-600');
+                predictionText.classList.add('text-green-600');
+                explanationText.textContent = "The content does not match patterns of known phishing attacks.";
+                guidanceBox.classList.add('hidden');
+                resultBox.classList.remove('border-red-500');
+                resultBox.classList.add('border-green-500');
+            }
+            predictionResultDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
